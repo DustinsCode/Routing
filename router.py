@@ -3,7 +3,7 @@
 import socket
 #import os
 import sys
-import netifaces
+#import netifaces
 import struct
 import binascii
 
@@ -34,11 +34,11 @@ def router():
 
                 # Eth type should be 0806 for arp request as shown in wireshark
                 # If packet isn't this, skip dat boi
-                if ethType == 'x08\x06':
+                if ethType == '\x08\x06':
 
                     #ARP header stuff
-                    arpHeader = packet[14:42]
-                    arpContents = struct.unpack("!2s2s1s1s2s6s4s6s4s", arpHeader)
+                    arpHeader = packet[0][14:42]
+                    arpContents = struct.unpack("2s2s1s1s2s6s4s6s4s", arpHeader)
 
                     opCode = arpContents[4]
                     sourceIP = arpContents[6]
@@ -46,31 +46,42 @@ def router():
                     targetIP = arpContents[8]
 
 
+                    if binascii.hexlify(opCode) == "0001":
 
-                    print "##########ARP_REQUEST##########"
-                    print "##########ETH_HEADER###########"
-                    print "Destination MAC:     ", binascii.hexlify(destinationMac)
-                    print "Source MAC:          ", binascii.hexlify(sourceMac)
-                    print "Eth Type:            ", binascii.hexlify(ethType)
-                    print "###############################"
-                    print "##########ARP_HEADER##########"
-                    print "Op code:             ", binascii.hexlify(opCode)
-                    print "Source MAC:          ", binascii.hexlify(sourceMac)
-                    print "Source IP:           ", binascii.hexlify(sourceIP)
-                    print "Target MAC:          ", binascii.hexlify(targetMac)
-                    print "Target IP:           ", binascii.hexlify(targetIP)
-                    print "\n\n\n"
+                        print "##########ARP_REQUEST##########"
+                        print "##########ETH_HEADER###########"
+                        print "Destination MAC:     ", binascii.hexlify(destinationMac)
+                        print "Source MAC:          ", binascii.hexlify(sourceMac)
+                        print "Eth Type:            ", binascii.hexlify(ethType)
+                        print "###############################"
+                        print "##########ARP_HEADER##########"
+                        print "Op code:             ", binascii.hexlify(opCode)
+                        print "Source MAC:          ", binascii.hexlify(sourceMac)
+                        print "Source IP:           ", binascii.hexlify(sourceIP)
+                        print "Target MAC:          ", binascii.hexlify(targetMac)
+                        print "Target IP:           ", binascii.hexlify(targetIP)
+                        print "\n\n\n"
 
 
-                    #obtain list of addresses on the network
-                    networkList = netifaces.interfaces()
+                        #obtain list of addresses on the network
+                        #networkList = netifaces.interfaces()
+
+                        #start building reply packet
+                        newEthHeader = struct.pack("!6s6s2s", sourceMac, destinationMac, ethType)
+
+                        newArpHeader = struct.pack("2s2s1s1s2s6s4s6s4s", arpContents[0], arpContents[1], arpContents[2], arpContents[3],
+                                '\x00\x02' , targetMac, targetIP, sourceMac, sourceIP)
+
+                        replyPacket = newEthHeader + newArpHeader
+                        print binascii.hexlify(replyPacket)
+
+                        s.sendto(replyPacket, packet[1])
 
 
 
                 #if ICMP
-                elif ethType == 'x08\x00':
-                    #do icmp stuff
-                    print "icmp request"
+                #elif ethType == '\x08\x00':
+                 #   print "icmp request"
 
 
 
