@@ -17,9 +17,11 @@ def router():
 		sys.exit(-1)
 
 	while True:
-		
-		packet = s.recvfrom(1024)
 
+		packet = s.recvfrom(1024)
+		print packet 
+
+		ethHeader = packet[0][0:14]
 
 
 
