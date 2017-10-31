@@ -7,6 +7,33 @@ import netifaces
 import struct
 import binascii
 
+'''
+Virtual Router Project
+
+@author Dustin Thurston
+@author Ryan Walt
+'''
+
+'''
+Finds the MAC address of the router
+
+@return 
+'''
+def findMac(srcIP):
+	#obtain list of addresses on the network
+	networkList = netifaces.interfaces()
+	print networkList
+	for iface in networkList:
+		addr = netifaces.ifaddresses(iface)[2][0]['addr']
+		mac = netifaces.ifaddresses(iface)[17][0]['addr']
+		print addr
+		print mac
+		print socket.inet_ntoa(targetIP)
+		if addr == socket.inet_ntoa(srcIP):
+			return binascii.unhexlify(mac.replace(':', ''))
+
+	return "MAC_NOT_FOUND"
+
 def router():
 
 	try:
@@ -63,22 +90,7 @@ def router():
                         print "\n\n"
 
 
-                        #obtain list of addresses on the network
-                        networkList = netifaces.interfaces()
-                        print networkList
-                        for iface in networkList:
-                            addr = netifaces.ifaddresses(iface)[2][0]['addr']
-                            mac = netifaces.ifaddresses(iface)[17][0]['addr']
-                            print addr
-                            print mac
-                            print socket.inet_ntoa(targetIP)
-                            if addr == socket.inet_ntoa(targetIP):
-                                targetMac = binascii.unhexlify(mac.replace(':', ''))
-                                print targetMac
-                                print mac
-                                break
-
-
+						targetMac = findMac(targetIP)
 
 
                         #start building reply packet
@@ -136,23 +148,24 @@ def router():
                             #new ip header
                             newIpChecksum = '\x00\x00'
 
-                            tempIpHeader = struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2], ipContents[3], ipContents[4],
-                                    ttl, ipContents[6],newIpChecksum, destinationIP, sourceIP)
+                            tempIpHeader = struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],
+								ipContents[3], ipContents[4], ttl, ipContents[6],newIpChecksum, destinationIP, sourceIP)
 
                             newIpChecksum = str(binascii.crc32(tempIpHeader))
 
-                            newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2], ipContents[3], ipContents[4],
-                                    ttl, ipContents[6],newIpChecksum, destinationIP, sourceIP)
+                            newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],
+								ipContents[3], ipContents[4], ttl, ipContents[6],newIpChecksum, destinationIP, sourceIP)
 
                             #new ICMP header
                             newIcmpChecksum = '\x00\x00'
 
                             tempIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x00', icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
 
+
                             newIcmpChecksum = str(binascii.crc32(tempIcmpHeader))
 
+							#Pack new header
                             newIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x00', icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
-
 
                             #send it
                             replyPacket = newEthHeader + newIpHeader + newIcmpHeader
