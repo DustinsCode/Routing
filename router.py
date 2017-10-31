@@ -73,17 +73,76 @@ def router():
                                 '\x00\x02' , targetMac, targetIP, sourceMac, sourceIP)
 
                         replyPacket = newEthHeader + newArpHeader
-                        print binascii.hexlify(replyPacket)
+                        #print binascii.hexlify(replyPacket)
 
                         s.sendto(replyPacket, packet[1])
 
 
 
-                #if ICMP
-                #elif ethType == '\x08\x00':
-                 #   print "icmp request"
+                #if ICMP also apparently tcp is 800 so that's fun
+                elif ethType == '\x08\x00':
 
 
+                    #ip header
+                    ipHeader = packet[0][14:34]
+                    ipContents = struct.unpack("1s1s2s2s2s1s1s2s4s4s",ipHeader)
+
+                    sourceIP = ipContents[8]
+                    destinationIP = ipContents[9]
+                    ttl = ipContents[5]
+                    #checkSum = ipContents[7]
+                    ipProtocol = ipContents[6]
+
+                    if ipContents[1] == '\x00' and ipProtocol == '\x01':
+
+                        #icmp header
+                        icmpHeader = packet[0][34:98]
+                        icmpContents = struct.unpack("1s1s2s2s2s8s48s",icmpHeader)
+
+                        icmpType = icmpContents[0]
+                        icmpCode = icmpContents[1]
+                        #icmpChecksum = icmpContents[2]
+                        icmpID = icmpContents[3]
+                        icmpSeq = icmpContents[4]
+                        icmpTime = icmpContents[5]
+                        icmpData = icmpContents[6]
+
+
+
+
+                        #Start building reply
+                        #if type is echo request
+                        if icmpType == '\x08':
+                            print "echo request recd"
+
+                            #new eth header
+                            newEthHeader = struct.pack("!6s6s2s", sourceMac, destinationMac, ethType)
+
+                            #new ip header
+                            newIpChecksum = '\x00\x00'
+
+                            tempIpHeader = struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2], ipContents[3], ipContents[4],
+                                    ttl, ipContents[6],newIpChecksum, destinationIP, sourceIP)
+
+                            newIpChecksum = str(binascii.crc32(tempIpHeader))
+
+                            newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2], ipContents[3], ipContents[4],
+                                    ttl, ipContents[6],newIpChecksum, destinationIP, sourceIP)
+
+                            #new ICMP header
+                            newIcmpChecksum = '\x00\x00'
+
+                            tempIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x00', icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
+
+                            newIcmpChecksum = str(binascii.crc32(tempIcmpHeader))
+
+                            newIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x00', icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
+
+
+                            #send it
+                            replyPacket = newEthHeader + newIpHeader + newIcmpHeader
+                            s.sendto(replyPacket, packet[1])
+                            print "icmp echo sent"
 
 
 router()
