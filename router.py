@@ -19,6 +19,9 @@ Finds the MAC address of the router
 
 @return
 '''
+global listIP1
+global listIP2
+
 def findMac(srcIP):
 	#obtain list of addresses on the network
 	networkList = netifaces.interfaces()
@@ -33,6 +36,15 @@ def findMac(srcIP):
 			return binascii.unhexlify(mac.replace(':', ''))
 
 	return "MAC_NOT_FOUND"
+
+def getRoutingList():
+	table1 = open("r1-table.txt", "r")
+	table2 = open("r2-table.txt", "r")
+	listIP1 = table1.read().replace("/", " ").split("\n")
+	listIP2 = table2.read().replace("/", " ").split("\n")
+	print listIP1
+	print listIP2
+	
 
 def router():
 
@@ -169,6 +181,7 @@ def router():
                             replyPacket = newEthHeader + newIpHeader + newIcmpHeader
                             s.sendto(replyPacket, packet[1])
                             print "icmp echo sent"
+	
 
-
+getRoutingList()
 router()
