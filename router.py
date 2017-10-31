@@ -3,7 +3,7 @@
 import socket
 #import os
 import sys
-#import netifaces
+import netifaces
 import struct
 import binascii
 
@@ -60,14 +60,29 @@ def router():
                         print "Source IP:           ", binascii.hexlify(sourceIP)
                         print "Target MAC:          ", binascii.hexlify(targetMac)
                         print "Target IP:           ", binascii.hexlify(targetIP)
-                        print "\n\n\n"
+                        print "\n\n"
 
 
                         #obtain list of addresses on the network
-                        #networkList = netifaces.interfaces()
+                        networkList = netifaces.interfaces()
+                        print networkList
+                        for iface in networkList:
+                            addr = netifaces.ifaddresses(iface)[2][0]['addr']
+                            mac = netifaces.ifaddresses(iface)[17][0]['addr']
+                            print addr
+                            print mac
+                            print socket.inet_ntoa(targetIP)
+                            if addr == socket.inet_ntoa(targetIP):
+                                targetMac = binascii.unhexlify(mac.replace(':', ''))
+                                print targetMac
+                                print mac
+                                break
+
+
+
 
                         #start building reply packet
-                        newEthHeader = struct.pack("!6s6s2s", sourceMac, destinationMac, ethType)
+                        newEthHeader = struct.pack("!6s6s2s", sourceMac, targetMac, ethType)
 
                         newArpHeader = struct.pack("2s2s1s1s2s6s4s6s4s", arpContents[0], arpContents[1], arpContents[2], arpContents[3],
                                 '\x00\x02' , targetMac, targetIP, sourceMac, sourceIP)
