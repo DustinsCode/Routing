@@ -17,7 +17,7 @@ Virtual Router Project
 '''
 Finds the MAC address of the router
 
-@return 
+@return
 '''
 def findMac(srcIP):
 	#obtain list of addresses on the network
@@ -28,7 +28,7 @@ def findMac(srcIP):
 		mac = netifaces.ifaddresses(iface)[17][0]['addr']
 		print addr
 		print mac
-		print socket.inet_ntoa(targetIP)
+		#print socket.inet_ntoa(targetIP)
 		if addr == socket.inet_ntoa(srcIP):
 			return binascii.unhexlify(mac.replace(':', ''))
 
@@ -90,7 +90,7 @@ def router():
                         print "\n\n"
 
 
-						targetMac = findMac(targetIP)
+			targetMac = findMac(targetIP)
 
 
                         #start building reply packet
@@ -117,7 +117,7 @@ def router():
                     sourceIP = ipContents[8]
                     destinationIP = ipContents[9]
                     ttl = ipContents[5]
-                    #checkSum = ipContents[7]
+                    checkSum = ipContents[7]
                     ipProtocol = ipContents[6]
 
                     if ipContents[1] == '\x00' and ipProtocol == '\x01':
@@ -128,7 +128,7 @@ def router():
 
                         icmpType = icmpContents[0]
                         icmpCode = icmpContents[1]
-                        #icmpChecksum = icmpContents[2]
+                        icmpChecksum = icmpContents[2]
                         icmpID = icmpContents[3]
                         icmpSeq = icmpContents[4]
                         icmpTime = icmpContents[5]
@@ -146,15 +146,13 @@ def router():
                             newEthHeader = struct.pack("!6s6s2s", sourceMac, destinationMac, ethType)
 
                             #new ip header
-                            newIpChecksum = '\x00\x00'
+                            #newIpChecksum = '\x00\x00'
 
-                            tempIpHeader = struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],
-								ipContents[3], ipContents[4], ttl, ipContents[6],newIpChecksum, destinationIP, sourceIP)
+                            #tempIpHeader = struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2], ipContents[3], ipContents[4], ttl, ipContents[6],newIpChecksum, destinationIP, sourceIP)
 
-                            newIpChecksum = str(binascii.crc32(tempIpHeader))
+                            #newIpChecksum = str(binascii.crc32(tempIpHeader))
 
-                            newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],
-								ipContents[3], ipContents[4], ttl, ipContents[6],newIpChecksum, destinationIP, sourceIP)
+                            newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],checkSum, destinationIP, sourceIP)
 
                             #new ICMP header
                             newIcmpChecksum = '\x00\x00'
