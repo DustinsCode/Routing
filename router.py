@@ -22,6 +22,9 @@ Finds the MAC address of the router
 global listIP1
 global listIP2
 
+"""
+Finds MAC address of requested IP
+"""
 def findMac(IP):
 	#obtain list of addresses on the network
 	networkList = netifaces.interfaces()
@@ -37,6 +40,9 @@ def findMac(IP):
 
 	return "MAC_NOT_FOUND"
 
+"""
+find next hop
+"""
 def findNextHop(iplist, destIp):
 	for entry in iplist:
 		ipNum = entry[0].spit('/')
@@ -53,6 +59,9 @@ def findNextHop(iplist, destIp):
 				return entry[2]
 	return False
 
+"""
+gets routing tables and puts them into lists
+"""
 def getRoutingList():
 	table1 = open("r1-table.txt", "r")
 	table2 = open("r2-table.txt", "r")
@@ -61,23 +70,31 @@ def getRoutingList():
 	print listIP1
 	print listIP2
 
+"""
+Creates ARP header
+"""
 def makeArpHeader(reply, hwareType, pcType, hwareSize, pcSize, srcMac, srcIp, destMac, destIp):
 
 	if reply is True:
 		opCode = '\x00\x02'
 
+	#this is an ARP request
 	else:
 		opCode = '\x00\x01'
 		nextHop = findNextHop(listIP1, destIp)
 		if nextHop is False:
 			nextHop = findNextHop(listIP2, destIp)
-
+			#if nextHop is False: send error message.  Part three stuff
+			#TODO: Since this means we need to jump to r2's network, we need to do an ARP request
 
 	arpHeader = struct.pack("2s2s1s1s2s6s4s6s4s", hwareType, pcType, hwareSize, pcSize,
 		opCode , srcMac, srcIp, destMac, destIp)
 
 	return arpHeader
 
+"""
+Runs the router
+"""
 def router():
 
 	try:
@@ -182,12 +199,8 @@ def router():
 					#new eth header
 					newEthHeader = struct.pack("!6s6s2s", sourceMac, destinationMac, ethType)
 
-					#new ip header
-					#newIpChecksum = '\x00\x00'
 
-					#tempIpHeader = struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2], ipContents[3], ipContents[4], ttl, ipContents[6],newIpChecksum, destinationIP, sourceIP)
-
-					#newIpChecksum = str(binascii.crc32(tempIpHeader))
+					#TODO: calculate checksum
 
 					newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],checkSum, destinationIP, sourceIP)
 
