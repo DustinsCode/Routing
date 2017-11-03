@@ -91,7 +91,6 @@ def router():
         #  https://stackoverflow.com/questions/24415294/python-arp-sniffing-raw-socket-no-reply-packets
 
 	while True:
-
 		packet = s.recvfrom(1024)
 
         #Ethernet Header Stuff
@@ -113,7 +112,6 @@ def router():
             sourceIP = arpContents[6]
             targetMac = arpContents[7]
             targetIP = arpContents[8]
-
 
             if binascii.hexlify(opCode) == "0001":
 
