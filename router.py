@@ -22,7 +22,7 @@ Finds the MAC address of the router
 global listIP1
 global listIP2
 
-def findMac(srcIP):
+def findMac(IP):
 	#obtain list of addresses on the network
 	networkList = netifaces.interfaces()
 	print networkList
@@ -32,10 +32,26 @@ def findMac(srcIP):
 		print addr
 		print mac
 		#print socket.inet_ntoa(targetIP)
-		if addr == socket.inet_ntoa(srcIP):
+		if addr == socket.inet_ntoa(IP):
 			return binascii.unhexlify(mac.replace(':', ''))
 
 	return "MAC_NOT_FOUND"
+
+def findNextHop(iplist, destIp):
+	for entry in iplist:
+		ipNum = entry[0].spit('/')
+		destIpList = destIP.split('.')
+
+		#checking 16 and 24 bit patterns
+		if ipNum[1] == 16:
+			newIpList = ipNum.split('.')
+			if newIpList[0-1] == destIpList[0-1]:
+				return entry[2]
+		elif ipNum[1] == 24:
+			newIpList = ipNum.split('.')
+			if newIpList[0-2] == destIpList[0-2]:
+				return entry[2]
+	return False
 
 def getRoutingList():
 	table1 = open("r1-table.txt", "r")
@@ -44,7 +60,23 @@ def getRoutingList():
 	listIP2 = table2.read().replace("/", " ").split("\n")
 	print listIP1
 	print listIP2
-	
+
+def makeArpHeader(reply, hwareType, pcType, hwareSize, pcSize, srcMac, srcIp, destMac, destIp):
+
+	if reply is True:
+		opCode = '\x00\x02'
+
+	else:
+		opCode = '\x00\x01'
+		nextHop = findNextHop(listIP1, destIp)
+		if nextHop is False:
+			nextHop = findNextHop(listIP2, destIp)
+
+
+	arpHeader = struct.pack("2s2s1s1s2s6s4s6s4s", hwareType, pcType, hwareSize, pcSize,
+		opCode , srcMac, srcIp, destMac, destIp)
+
+	return arpHeader
 
 def router():
 
@@ -77,7 +109,7 @@ def router():
 
                     #ARP header stuff
                     arpHeader = packet[0][14:42]
-                    arpContents = struct.unpack("2s2s1s1s2s6s4s6s4s", arpHeader)
+                	arpContents = struct.unpack("2s2s1s1s2s6s4s6s4s", arpHeader)
 
                     opCode = arpContents[4]
                     sourceIP = arpContents[6]
@@ -101,15 +133,16 @@ def router():
                         print "Target IP:           ", binascii.hexlify(targetIP)
                         print "\n\n"
 
-
-			targetMac = findMac(targetIP)
+						#finds mac address of router
+						targetMac = findMac(targetIP)
 
 
                         #start building reply packet
                         newEthHeader = struct.pack("!6s6s2s", sourceMac, targetMac, ethType)
 
-                        newArpHeader = struct.pack("2s2s1s1s2s6s4s6s4s", arpContents[0], arpContents[1], arpContents[2], arpContents[3],
-                                '\x00\x02' , targetMac, targetIP, sourceMac, sourceIP)
+						#make reply arp header 
+                        newArpHeader = makeArpHeader(True, arpContents[0], arpContents[1], arpContents[2], arpContents[3],
+                        	targetMac, targetIP, sourceMac, sourceIP)
 
                         replyPacket = newEthHeader + newArpHeader
                         #print binascii.hexlify(replyPacket)
@@ -120,7 +153,6 @@ def router():
 
                 #if ICMP also apparently tcp is 800 so that's fun
                 elif ethType == '\x08\x00':
-
 
                     #ip header
                     ipHeader = packet[0][14:34]
@@ -145,9 +177,6 @@ def router():
                         icmpSeq = icmpContents[4]
                         icmpTime = icmpContents[5]
                         icmpData = icmpContents[6]
-
-
-
 
                         #Start building reply
                         #if type is echo request
@@ -181,7 +210,7 @@ def router():
                             replyPacket = newEthHeader + newIpHeader + newIcmpHeader
                             s.sendto(replyPacket, packet[1])
                             print "icmp echo sent"
-	
+
 
 getRoutingList()
 router()
