@@ -102,13 +102,12 @@ def router():
         sourceMac = ethContents[1]
         ethType = ethContents[2]
 
-
         # Eth type should be 0806 for arp request as shown in wireshark
         # If packet isn't this, skip dat boi
-        if ethType == '\x08\x06':
+		if ethType == '\x08\x06':
             #ARP header stuff
             arpHeader = packet[0][14:42]
-        	arpContents = struct.unpack("2s2s1s1s2s6s4s6s4s", arpHeader)
+			arpContents = struct.unpack("2s2s1s1s2s6s4s6s4s", arpHeader)
 
             opCode = arpContents[4]
             sourceIP = arpContents[6]
