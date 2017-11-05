@@ -73,7 +73,7 @@ def getRoutingList():
 	listIP1 = table1.read().replace("/", " ").split("\n")
 	listIP2 = table2.read().replace("/", " ").split("\n")
 	#finds mac address of router
-	targetMac = findMac(targetIP, None)
+	#targetMac = findMac(targetIP, None)
 	print listIP1
 	print listIP2
 
@@ -136,6 +136,7 @@ def router():
 
 		destinationMac = ethContents[0]
 		routerMac = destinationMac
+                #print binascii.hexlify(routerMac)
 		sourceMac = ethContents[1]
 		ethType = ethContents[2]
 
@@ -164,18 +165,18 @@ def router():
 				print "Source MAC:          ", binascii.hexlify(sourceMac)
 				print "Source IP:           ", binascii.hexlify(sourceIP)
 				print "Target MAC:          ", binascii.hexlify(targetMac)
-				print "Target IP:           ", binascii.hexlify(targetIP)
+				print "Target IP:           ", binascii.hexlify(routerIp)
 				print "\n\n"
 
 				#finds mac address of router
-				routerMac = findMac(targetIP, None)
+				routerMac = findMac(routerIp, None)
 
 				#start building reply packet
 				newEthHeader = struct.pack("!6s6s2s", sourceMac, targetMac, ethType)
 
 				#make reply arp header
 				newArpHeader = makeArpHeader(True, arpContents[0], arpContents[1], arpContents[2], arpContents[3],
-					targetMac, targetIP, sourceMac, sourceIP)
+					targetMac, routerIp, sourceMac, sourceIP)
 
 				replyPacket = newEthHeader + newArpHeader
 				#print binascii.hexlify(replyPacket)
@@ -218,7 +219,7 @@ def router():
 					print "echo request recd"
 
 					#TODO: Check if destination is on this network, if not, we need arp request
-					s.sendto(makeArpRequest(destinationIP, findMac(destinationIP, None)[1])
+					s.sendto(makeArpRequest(destinationIP, findMac(destinationIP, None)[1]))
 
 					#new eth header
 					newEthHeader = struct.pack("!6s6s2s", sourceMac, destinationMac, ethType)
