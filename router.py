@@ -19,6 +19,11 @@ Finds the MAC address of the router
 
 @return
 '''
+listIP1 = None
+listIP2 = None
+routerMac = None
+routerIp = None
+
 class myRouter:
 	listIP1 = None
 	listIP2 = None
@@ -28,6 +33,7 @@ class myRouter:
 	"""
 	Finds MAC address of requested IP
 	"""
+        @staticmethod
 	def findMac(IP, hop):
 		if hop is None:
 			#obtain list of addresses on the network
@@ -49,6 +55,7 @@ class myRouter:
 	"""
 	find next hop
 	"""
+        @staticmethod
 	def findNextHop(iplist, destIp):
 		for entry in iplist:
 			ipNum = entry[1]
@@ -68,6 +75,7 @@ class myRouter:
 	"""
 	gets routing tables and puts them into lists
 	"""
+        @staticmethod
 	def getRoutingList():
 		table1 = open("r1-table.txt", "r")
 		table2 = open("r2-table.txt", "r")
@@ -81,6 +89,7 @@ class myRouter:
 	"""
 	Creates ARP header
 	"""
+        @staticmethod
 	def makeArpHeader(reply, hwareType, pcType, hwareSize, pcSize, srcMac, srcIp, destMac, destIp):
 
 		#arp reply
@@ -108,6 +117,7 @@ class myRouter:
 
 		return arpHeader
 
+        @staticmethod
 	def makeArpRequest(targetIP, targetMac):
 		ethHeader = struct.pack('!6s6s2s', routerMac, binascii.unhexlify('ffffffffffff'), '\x08\x06')
 		arpHeader = makeArpHeader(False, '\x00\x01', '\x08\x00', '\x06', '\x04', '\x00\x01', findMac(routerIp), routerIp, targetMac, targetIP)
@@ -116,6 +126,7 @@ class myRouter:
 	"""
 	Runs the router
 	"""
+        @staticmethod
 	def router():
 
 		try:
@@ -170,13 +181,13 @@ class myRouter:
 					print "\n\n"
 
 					#finds mac address of router
-					routerMac = findMac(targetIP, None)
+					routerMac = myRouter.findMac(targetIP, None)
 
 					#start building reply packet
 					newEthHeader = struct.pack("!6s6s2s", sourceMac, routerMac, ethType)
 
 					#make reply arp header
-					newArpHeader = makeArpHeader(True, arpContents[0], arpContents[1], arpContents[2], arpContents[3],
+					newArpHeader = myRouter.makeArpHeader(True, arpContents[0], arpContents[1], arpContents[2], arpContents[3],
 						routerMac, targetIP, sourceMac, sourceIP)
 
 					replyPacket = newEthHeader + newArpHeader
@@ -221,11 +232,11 @@ class myRouter:
 
 						#TODO: Check if destination is on this network, if not, we need arp request
 						print listIP1
-						iface = findNextHop(listIP1, sourceIP)
-						routerAddrs = findMac(None, iface)
+						iface = myRouter.findNextHop(listIP1, sourceIP)
+						routerAddrs = myRouter.findMac(None, iface)
 						routerIp = routerAddrs[0]
 						routerMac = routerAddrs[1]
-						arpReq = makeArpRequest(destinationIP, findMac(destinationIP))
+						arpReq = myRouter.makeArpRequest(destinationIP, findMac(destinationIP))
 						s.sendto(arpReq, binascii.hexlify('ffffffffffff'))
 
 						#new eth header
