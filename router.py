@@ -30,8 +30,7 @@ class myRouter:
 	"""
 	Finds MAC address of requested IP
 	"""
-        @staticmethod
-	def findMac(IP, hop):
+	def findMac(self, IP, hop):
 		if hop is None:
 			#obtain list of addresses on the network
 			networkList = netifaces.interfaces()
@@ -52,8 +51,7 @@ class myRouter:
 	"""
 	find next hop
 	"""
-        @staticmethod
-	def findNextHop(iplist, destIp):
+	def findNextHop(self, iplist, destIp):
 		for entry in iplist:
 			ipNum = entry[1]
 			destIpList = destIP.split('.')
@@ -72,22 +70,20 @@ class myRouter:
 	"""
 	gets routing tables and puts them into lists
 	"""
-        @staticmethod
-	def getRoutingList():
+	def getRoutingList(self):
 		table1 = open("r1-table.txt", "r")
 		table2 = open("r2-table.txt", "r")
 		self.listIP1 = table1.read().replace("/", " ").split("\n")
 		self.listIP2 = table2.read().replace("/", " ").split("\n")
 		#finds mac address of router
 		#targetMac = findMac(targetIP, None)
-		print listIP1
-		print listIP2
+		print self.listIP1
+		print self.listIP2
 
 	"""
 	Creates ARP header
 	"""
-        @staticmethod
-	def makeArpHeader(reply, hwareType, pcType, hwareSize, pcSize, srcMac, srcIp, destMac, destIp):
+	def makeArpHeader(self, reply, hwareType, pcType, hwareSize, pcSize, srcMac, srcIp, destMac, destIp):
 
 		#arp reply
 		if reply is True:
@@ -96,9 +92,9 @@ class myRouter:
 		#this is an ARP request
 		else:
 			opCode = '\x00\x01'
-			nextHop = findNextHop(listIP1, destIp)
+			nextHop = findNextHop(self.listIP1, destIp)
 			if nextHop is False:
-				nextHop = findNextHop(listIP2, destIp)
+				nextHop = findNextHop(self.listIP2, destIp)
 				#if nextHop is False: send error message.  Part three stuff
 				if nexHop is False:
 					print "Error.  Destination not found"
@@ -114,17 +110,18 @@ class myRouter:
 
 		return arpHeader
 
-        @staticmethod
-	def makeArpRequest(targetIP, targetMac):
-		ethHeader = struct.pack('!6s6s2s', routerMac, binascii.unhexlify('ffffffffffff'), '\x08\x06')
-		arpHeader = makeArpHeader(False, '\x00\x01', '\x08\x00', '\x06', '\x04', '\x00\x01', findMac(routerIp), routerIp, targetMac, targetIP)
+	'''
+	make arp request packet
+	'''
+	def makeArpRequest(self, targetIP, targetMac):
+		ethHeader = struct.pack('!6s6s2s', self.routerMac, binascii.unhexlify('ffffffffffff'), '\x08\x06')
+		arpHeader = makeArpHeader(False, '\x00\x01', '\x08\x00', '\x06', '\x04', '\x00\x01', findMac(self.routerIp), self.routerIp, targetMac, targetIP)
 		return ethHeader + arpHeader
 
 	"""
 	Runs the router
 	"""
-        @staticmethod
-	def router():
+	def router(self):
 
 		try:
 			s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x003))
@@ -144,7 +141,7 @@ class myRouter:
 			ethContents = struct.unpack("!6s6s2s", ethHeader)
 
 			destinationMac = ethContents[0]
-			routerMac = destinationMac
+			self.routerMac = destinationMac
 	                #print binascii.hexlify(routerMac)
 			sourceMac = ethContents[1]
 			ethType = ethContents[2]
@@ -178,14 +175,14 @@ class myRouter:
 					print "\n\n"
 
 					#finds mac address of router
-					routerMac = myRouter.findMac(targetIP, None)
+					self.routerMac = myRouter.findMac(targetIP, None)
 
 					#start building reply packet
-					newEthHeader = struct.pack("!6s6s2s", sourceMac, routerMac, ethType)
+					newEthHeader = struct.pack("!6s6s2s", sourceMac, self.routerMac, ethType)
 
 					#make reply arp header
 					newArpHeader = myRouter.makeArpHeader(True, arpContents[0], arpContents[1], arpContents[2], arpContents[3],
-						routerMac, targetIP, sourceMac, sourceIP)
+						self.routerMac, targetIP, sourceMac, sourceIP)
 
 					replyPacket = newEthHeader + newArpHeader
 					#print binascii.hexlify(replyPacket)
@@ -228,11 +225,11 @@ class myRouter:
 						print "echo request recd"
 
 						#TODO: Check if destination is on this network, if not, we need arp request
-						print listIP1
-						iface = myRouter.findNextHop(listIP1, sourceIP)
+						print self.listIP1
+						iface = myRouter.findNextHop(self.listIP1, sourceIP)
 						routerAddrs = myRouter.findMac(None, iface)
-						routerIp = routerAddrs[0]
-						routerMac = routerAddrs[1]
+						self.routerIp = routerAddrs[0]
+						self.routerMac = routerAddrs[1]
 						arpReq = myRouter.makeArpRequest(destinationIP, findMac(destinationIP))
 						s.sendto(arpReq, binascii.hexlify('ffffffffffff'))
 
