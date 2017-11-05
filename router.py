@@ -25,19 +25,22 @@ global listIP2
 """
 Finds MAC address of requested IP
 """
-def findMac(IP):
-	#obtain list of addresses on the network
-	networkList = netifaces.interfaces()
-	print networkList
-	for iface in networkList:
-		addr = netifaces.ifaddresses(iface)[2][0]['addr']
-		mac = netifaces.ifaddresses(iface)[17][0]['addr']
-		print addr
-		print mac
-		#print socket.inet_ntoa(targetIP)
-		if addr == socket.inet_ntoa(IP):
-			return binascii.unhexlify(mac.replace(':', ''))
-
+def findMac(IP, hop):
+	if hop is None:
+		#obtain list of addresses on the network
+		networkList = netifaces.interfaces()
+		for iface in networkList:
+			addr = netifaces.ifaddresses(iface)[2][0]['addr']
+			mac = netifaces.ifaddresses(iface)[17][0]['addr']
+			print addr
+			print mac
+			#print socket.inet_ntoa(targetIP)
+			if addr == socket.inet_ntoa(IP):
+				return binascii.unhexlify(mac.replace(':', ''))
+	else:
+		addr = netifaces.ifaddresses(hop)[2][0]['addr']
+		mac = netifaces.ifaddresses(hop)[17][0]['addr']
+		return [addr, mac]
 	return "MAC_NOT_FOUND"
 
 """
@@ -45,17 +48,17 @@ find next hop
 """
 def findNextHop(iplist, destIp):
 	for entry in iplist:
-		ipNum = entry[0].spit('/')
+		ipNum = entry[1]
 		destIpList = destIP.split('.')
 
 		#checking 16 and 24 bit patterns
 		if ipNum[1] == 16:
 			newIpList = ipNum.split('.')
-			if newIpList[0-1] == destIpList[0-1]:
+			if newIpList[0:2] == destIpList[0:2]:
 				return entry[2]
 		elif ipNum[1] == 24:
 			newIpList = ipNum.split('.')
-			if newIpList[0-2] == destIpList[0-2]:
+			if newIpList[0:3] == destIpList[0:3]:
 				return entry[2]
 	return False
 
@@ -75,6 +78,7 @@ Creates ARP header
 """
 def makeArpHeader(reply, hwareType, pcType, hwareSize, pcSize, srcMac, srcIp, destMac, destIp):
 
+	#arp reply
 	if reply is True:
 		opCode = '\x00\x02'
 
@@ -85,7 +89,14 @@ def makeArpHeader(reply, hwareType, pcType, hwareSize, pcSize, srcMac, srcIp, de
 		if nextHop is False:
 			nextHop = findNextHop(listIP2, destIp)
 			#if nextHop is False: send error message.  Part three stuff
-			#TODO: Since this means we need to jump to r2's network, we need to do an ARP request
+			if nexHop is False:
+				print "Error.  Destination not found"
+
+		newAddrs = findMac(destIp, nextHop)
+		destIp = newAddrs[0]
+		destMac = newAddrs[1]
+		print "Next MAC: ", destMac
+		print "Next IP: ", destIp
 
 	arpHeader = struct.pack("2s2s1s1s2s6s4s6s4s", hwareType, pcType, hwareSize, pcSize,
 		opCode , srcMac, srcIp, destMac, destIp)
@@ -105,7 +116,7 @@ def router():
 		sys.exit(-1)
 
 
-        #  https://stackoverflow.com/questions/24415294/python-arp-sniffing-raw-socket-no-reply-packets
+        # https://stackoverflow.com/questions/24415294/python-arp-sniffing-raw-socket-no-reply-packets
 
 	while True:
 		packet = s.recvfrom(1024)
@@ -147,7 +158,7 @@ def router():
 				print "\n\n"
 
 				#finds mac address of router
-				targetMac = findMac(targetIP)
+				targetMac = findMac(targetIP, None)
 
 
 				#start building reply packet
