@@ -109,7 +109,7 @@ def makeArpHeader(reply, hwareType, pcType, hwareSize, pcSize, srcMac, srcIp, de
 
 def makeArpRequest(targetIP, targetMac):
 	ethHeader = struct.pack('!6s6s2s', routerMac, binascii.unhexlify('ffffffffffff'), '\x08\x06')
-	arpHeader = makeArpHeader(False, '\x00\x01', '\x08\x00', '\x06', '\x04', '\x00\x01', routerMac, binascii.hexlify('10.0.0.1'), targetMac, targetIP)
+	arpHeader = makeArpHeader(False, '\x00\x01', '\x08\x00', '\x06', '\x04', '\x00\x01', findMac(routerIp), routerIp, targetMac, targetIP)
 	return ethHeader + arpHeader
 
 """
@@ -150,7 +150,7 @@ def router():
 			opCode = arpContents[4]
 			sourceIP = arpContents[6]
 			targetMac = arpContents[7]
-			routerIp = arpContents[8]
+			targetIP = arpContents[8]
 
 			if binascii.hexlify(opCode) == "0001":
 
@@ -165,18 +165,18 @@ def router():
 				print "Source MAC:          ", binascii.hexlify(sourceMac)
 				print "Source IP:           ", binascii.hexlify(sourceIP)
 				print "Target MAC:          ", binascii.hexlify(targetMac)
-				print "Target IP:           ", binascii.hexlify(routerIp)
+				print "Target IP:           ", binascii.hexlify(targetIP)
 				print "\n\n"
 
 				#finds mac address of router
-				routerMac = findMac(routerIp, None)
+				routerMac = findMac(targetIP, None)
 
 				#start building reply packet
-				newEthHeader = struct.pack("!6s6s2s", sourceMac, targetMac, ethType)
+				newEthHeader = struct.pack("!6s6s2s", sourceMac, routerMac, ethType)
 
 				#make reply arp header
 				newArpHeader = makeArpHeader(True, arpContents[0], arpContents[1], arpContents[2], arpContents[3],
-					targetMac, routerIp, sourceMac, sourceIP)
+					routerMac, targetIP, sourceMac, sourceIP)
 
 				replyPacket = newEthHeader + newArpHeader
 				#print binascii.hexlify(replyPacket)
@@ -219,7 +219,9 @@ def router():
 					print "echo request recd"
 
 					#TODO: Check if destination is on this network, if not, we need arp request
-					s.sendto(makeArpRequest(destinationIP, findMac(destinationIP, None)[1]))
+					routerIp = s.gethostbyname(s.gethostname())
+					arpReq = makeArpRequest(destinationIP, findMac(destinationIP))
+					s.sendto(arpReq, binascii.hexlify('ffffffffffff'))
 
 					#new eth header
 					newEthHeader = struct.pack("!6s6s2s", sourceMac, destinationMac, ethType)
