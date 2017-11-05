@@ -19,16 +19,13 @@ Finds the MAC address of the router
 
 @return
 '''
-listIP1 = None
-listIP2 = None
-routerMac = None
-routerIp = None
-
 class myRouter:
-	listIP1 = None
-	listIP2 = None
-	routerMac = None
-	routerIp = None
+
+	def __init__(self):
+		self.listIP1 = []
+		self.listIP2 = []
+		self.routerMac = ''
+		self.routerIp = ''
 
 	"""
 	Finds MAC address of requested IP
@@ -79,8 +76,8 @@ class myRouter:
 	def getRoutingList():
 		table1 = open("r1-table.txt", "r")
 		table2 = open("r2-table.txt", "r")
-		listIP1 = table1.read().replace("/", " ").split("\n")
-		listIP2 = table2.read().replace("/", " ").split("\n")
+		self.listIP1 = table1.read().replace("/", " ").split("\n")
+		self.listIP2 = table2.read().replace("/", " ").split("\n")
 		#finds mac address of router
 		#targetMac = findMac(targetIP, None)
 		print listIP1
