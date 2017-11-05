@@ -21,6 +21,8 @@ Finds the MAC address of the router
 '''
 global listIP1
 global listIP2
+global routerMac
+global routerIp
 
 """
 Finds MAC address of requested IP
@@ -70,6 +72,8 @@ def getRoutingList():
 	table2 = open("r2-table.txt", "r")
 	listIP1 = table1.read().replace("/", " ").split("\n")
 	listIP2 = table2.read().replace("/", " ").split("\n")
+	#finds mac address of router
+	targetMac = findMac(targetIP, None)
 	print listIP1
 	print listIP2
 
@@ -103,6 +107,11 @@ def makeArpHeader(reply, hwareType, pcType, hwareSize, pcSize, srcMac, srcIp, de
 
 	return arpHeader
 
+def makeArpRequest(targetIP, targetMac):
+	ethHeader = struct.pack('!6s6s2s', routerMac, binascii.unhexlify('ffffffffffff'), '\x08\x06')
+	arpHeader = makeArpHeader(False, '\x00\x01', '\x08\x00', '\x06', '\x04', '\x00\x01', routerMac, binascii.hexlify('10.0.0.1'), targetMac, targetIP)
+	return ethHeader + arpHeader
+
 """
 Runs the router
 """
@@ -126,6 +135,7 @@ def router():
 		ethContents = struct.unpack("!6s6s2s", ethHeader)
 
 		destinationMac = ethContents[0]
+		routerMac = destinationMac
 		sourceMac = ethContents[1]
 		ethType = ethContents[2]
 
@@ -139,7 +149,7 @@ def router():
 			opCode = arpContents[4]
 			sourceIP = arpContents[6]
 			targetMac = arpContents[7]
-			targetIP = arpContents[8]
+			routerIp = arpContents[8]
 
 			if binascii.hexlify(opCode) == "0001":
 
@@ -158,8 +168,7 @@ def router():
 				print "\n\n"
 
 				#finds mac address of router
-				targetMac = findMac(targetIP, None)
-
+				routerMac = findMac(targetIP, None)
 
 				#start building reply packet
 				newEthHeader = struct.pack("!6s6s2s", sourceMac, targetMac, ethType)
@@ -188,6 +197,7 @@ def router():
 			checkSum = ipContents[7]
 			ipProtocol = ipContents[6]
 
+			#ipProtocol x01 is ICMP
 			if ipContents[1] == '\x00' and ipProtocol == '\x01':
 
 				#icmp header
@@ -207,11 +217,13 @@ def router():
 				if icmpType == '\x08':
 					print "echo request recd"
 
+					#TODO: Check if destination is on this network, if not, we need arp request
+					s.sendto(makeArpRequest(destinationIP, findMac(destinationIP, None)[1])
+
 					#new eth header
 					newEthHeader = struct.pack("!6s6s2s", sourceMac, destinationMac, ethType)
 
-
-					#TODO: calculate checksum
+					#TODO: calculate checksum.  Part 3 shenanigans
 
 					newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],checkSum, destinationIP, sourceIP)
 
