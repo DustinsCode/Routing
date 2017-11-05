@@ -219,6 +219,7 @@ def router():
 					print "echo request recd"
 
 					#TODO: Check if destination is on this network, if not, we need arp request
+					print listIP1
 					iface = findNextHop(listIP1, sourceIP)
 					routerAddrs = findMac(None, iface)
 					routerIp = routerAddrs[0]
