@@ -219,7 +219,10 @@ def router():
 					print "echo request recd"
 
 					#TODO: Check if destination is on this network, if not, we need arp request
-					routerIp = s.gethostbyname(s.gethostname())
+					iface = findNextHop(listIP1, sourceIP)
+					routerAddrs = findMac(None, iface)
+					routerIp = routerAddrs[0]
+					routerMac = routerAddrs[1]
 					arpReq = makeArpRequest(destinationIP, findMac(destinationIP))
 					s.sendto(arpReq, binascii.hexlify('ffffffffffff'))
 
