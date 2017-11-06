@@ -52,15 +52,17 @@ class myRouter:
 	find next hop
 	"""
 	def findNextHop(self, iplist, fdestIp):
-                for i in iplist:
-                    if i == '':
-                        iplist.remove(i)
-		for entry in iplist:
-                        entryList = entry.split(' ')
+		#remove empty indexes
+		for i in iplist:
+		    if i == '':
+		        iplist.remove(i)
 
-                        ipNum = entryList[1]
+		for entry in iplist:
+			entryList = entry.split(' ')
+
+			ipNum = entryList[1]
 			#fdestIp = socket.inet_ntoa(fdestIp)
-                        destIpList = fdestIp.split('.')
+			destIpList = fdestIp.split('.')
 
 			#checking 16 and 24 bit patterns
 			if ipNum == '16':
@@ -97,13 +99,13 @@ class myRouter:
 		else:
 			opCode = '\x00\x01'
 			nextHop = myRouter.findNextHop(self, self.listIP1, destIp)
-                        print nextHop
-                        print destIp
+			print nextHop
+			print destIp
 			if nextHop is False:
-				nextHop = myRouter.findNextHop(self, self.listIP2, destIp)
-				#if nextHop is False: send error message.  Part three stuff
-				if nextHop is False:
-					print "Error.  Destination not found"
+			nextHop = myRouter.findNextHop(self, self.listIP2, destIp)
+			#if nextHop is False: send error message.  Part three stuff
+			if nextHop is False:
+				print "Error.  Destination not found"
 
 			newAddrs = myRouter.findMac(self, destIp, nextHop)
 			destIp = newAddrs[0]
@@ -120,8 +122,8 @@ class myRouter:
 	make arp request packet
 	'''
 	def makeArpRequest(self, targetIP, targetMac):
-                print self.routerMac
-                ethHeader = struct.pack('!6s6s2s', binascii.hexlify(self.routerMac.replace(':','')), '\xFF\xFF\xFF\xFF\xFF\xFF', '\x08\x06')
+		print self.routerMac
+		ethHeader = struct.pack('!6s6s2s', binascii.hexlify(self.routerMac.replace(':','')), '\xFF\xFF\xFF\xFF\xFF\xFF', '\x08\x06')
 		arpHeader = myRouter.makeArpHeader(self, False, '\x00\x01', '\x08\x00', '\x06', '\x04', self.routerMac, self.routerIp, '\xFF\xFF\xFF\xFF\xFF\xFF', targetIP)
 		return ethHeader + arpHeader
 
@@ -149,7 +151,7 @@ class myRouter:
 
 			destinationMac = ethContents[0]
 			self.routerMac = destinationMac
-	                #print binascii.hexlify(routerMac)
+			#print binascii.hexlify(routerMac)
 			sourceMac = ethContents[1]
 			ethType = ethContents[2]
 
@@ -189,14 +191,12 @@ class myRouter:
 
 					#make reply arp header
 					newArpHeader = myRouter.makeArpHeader(self, True, arpContents[0], arpContents[1], arpContents[2], arpContents[3],
-						self.routerMac, targetIP, sourceMac, sourceIP)
+					self.routerMac, targetIP, sourceMac, sourceIP)
 
 					replyPacket = newEthHeader + newArpHeader
 					#print binascii.hexlify(replyPacket)
 
 					s.sendto(replyPacket, packet[1])
-
-
 
 			#if ICMP also apparently tcp is 800 so that's fun
 			elif ethType == '\x08\x00':
@@ -216,7 +216,7 @@ class myRouter:
 					#icmp header
 					icmpHeader = packet[0][34:98]
 					icmpContents = struct.unpack("1s1s2s2s2s8s48s",icmpHeader)
-                                        #print ipContents
+					#print ipContents
 					icmpType = icmpContents[0]
 					icmpCode = icmpContents[1]
 					icmpChecksum = icmpContents[2]
@@ -232,25 +232,33 @@ class myRouter:
 
 						#TODO: Check if destination is on this network, if not, we need arp request
 						print self.listIP1
-                                                sourceIp = socket.inet_ntoa(fsourceIP)
+						sourceIp = socket.inet_ntoa(fsourceIP)
 						print sourceIp
 
-                                                #Arp Request
-                                                iface = myRouter.findNextHop(self, self.listIP1,sourceIp)
-                                                if iface is False:
-                                                    iface = myRouter.findNextHop(self, self.listIP2, sourceIp)
-						print self.listIP1
-                                                print sourceIp
-                                                print iface
-                                                routerAddrs = myRouter.findMac(self, '', iface)
-						self.routerIp = routerAddrs[0]
-						self.routerMac = routerAddrs[1]
-                                                destMac = myRouter.findMac(self, destinationIP, None)
-                                                destinationIP = socket.inet_ntoa(destinationIP)
-                                                print 'Destination IP: ', destinationIP
-                                                print 'Destination mac: ', destMac
-						arpReq = myRouter.makeArpRequest(self, destinationIP, destMac)
-						s.sendto(arpReq, binascii.hexlify('ffffffffffff'))
+						#Arp Request
+						#TODO: add logic.  if the destination isn't on this network, do arp request
+						nextiface = myRouter.findNextHop(self, self.listIP1, destinationIP)
+						if nextiface == False:
+							nextiface = myRouter.findNextHop(self, self.listIP2, destinationIP)
+
+						print 'nextiface = ', nextiface
+						if nextiface != False:
+							iface = myRouter.findNextHop(self, self.listIP1,sourceIp)
+							if iface != nextiface
+							if iface is False:
+								iface = myRouter.findNextHop(self, self.listIP2, sourceIp)
+
+							print 'iface = ', iface
+							routerAddrs = myRouter.findMac(self, '', iface)
+							self.routerIp = routerAddrs[0]
+							self.routerMac = routerAddrs[1]
+							destMac = myRouter.findMac(self, destinationIP, None)
+							destinationIP = socket.inet_ntoa(destinationIP)
+							print 'Destination IP: ', destinationIP
+							#it won't know the next mac address....that's why we do an arp request ya dummy
+							print 'Destination mac: ', destMac
+							arpReq = myRouter.makeArpRequest(self, destinationIP, destMac)
+							s.sendto(arpReq, binascii.hexlify('ffffffffffff'))
 
 						#new eth header
 						newEthHeader = struct.pack("!6s6s2s", sourceMac, destinationMac, ethType)
