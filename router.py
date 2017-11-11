@@ -1,7 +1,6 @@
 #!/usr/bin/python
 
 import socket
-#import os
 import sys
 import netifaces
 import struct
@@ -332,7 +331,6 @@ class myRouter:
 							replyPacket = newEthHeader + newIpHeader + newIcmpHeader
 							s.sendto(replyPacket, packet[1])
 							print "icmp echo sent"
-
 
 temp = myRouter()
 temp.getRoutingList()
