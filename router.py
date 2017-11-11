@@ -26,7 +26,7 @@ class myRouter:
 		self.listIP2 = []
 		self.routerMac = ''
 		self.routerIp = ''
-                self.nextIp = ''
+		self.nextIp = ''
 
 	"""
 	Finds MAC address of requested IP
@@ -104,51 +104,51 @@ class myRouter:
 
 		#this is an ARP request
 		else:
-		    opCode = '\x00\x01'
-		    nextHop = myRouter.findNextHop(self, self.listIP1, destIp, False)
-		    print nextHop
-		    print destIp
-		    if nextHop is False:
-			nextHop = myRouter.findNextHop(self, self.listIP2, destIp, False)
-			#if nextHop is False: send error message.  Part three stuff
-		    	if nextHop is False:
-			    print "Error.  Destination not found"
+			opCode = '\x00\x01'
+			nextHop = myRouter.findNextHop(self, self.listIP1, destIp, False)
+			print nextHop
+			print destIp
+			if nextHop is False:
+				nextHop = myRouter.findNextHop(self, self.listIP2, destIp, False)
+				#if nextHop is False: send error message.  Part three stuff
+				if nextHop is False:
+					print "Error.  Destination not found"
 
-		    #newAddrs = myRouter.findMac(self, destIp, nextHop)
-                    #print 'new addrs in makeArpHeader: ', newAddrs
-                    destIp = myRouter.findNextHop(self, self.listIP1, destIp, True)
-		    self.nextIp = destIp
-                    #destMac = newAddrs[1]
-		    print "Next MAC: ", binascii.hexlify(destMac)
-		    print "Next IP: ", destIp
+			#newAddrs = myRouter.findMac(self, destIp, nextHop)
+			#print 'new addrs in makeArpHeader: ', newAddrs
+			destIp = myRouter.findNextHop(self, self.listIP1, destIp, True)
+			self.nextIp = destIp
+			#destMac = newAddrs[1]
+			print "Next MAC: ", binascii.hexlify(destMac)
+			print "Next IP: ", destIp
 
-                    hwareType = binascii.hexlify(hwareType)
-                    pcType = binascii.hexlify(pcType)
-                    pcSize = binascii.hexlify(pcSize)
-                    opCode = binascii.hexlify(opCode)
-                    #srcMac = binascii.hexlify(srcMac.replace(':', ''))
-                    #srcIp = binascii.hexlify(srcIp)
-                    destMac = binascii.hexlify(destMac)
-                    destIp = binascii.hexlify(destIp)
-                    print "hware: ", hwareType
-                    print "pcType: ", pcType
-                    print "pcSize: ", pcSize
-                    print "opCode: ", opCode
-                    print "srcMac: ", srcMac
-                    print "srcIp: ", srcIp
-                    print "destMac: ", destMac
-                    print "destIp: ", destIp
+					hwareType = binascii.hexlify(hwareType)
+					pcType = binascii.hexlify(pcType)
+					pcSize = binascii.hexlify(pcSize)
+					opCode = binascii.hexlify(opCode)
+					#srcMac = binascii.hexlify(srcMac.replace(':', ''))
+					#srcIp = binascii.hexlify(srcIp)
+					destMac = binascii.hexlify(destMac)
+					destIp = binascii.hexlify(destIp)
+					print "hware: ", hwareType
+					print "pcType: ", pcType
+					print "pcSize: ", pcSize
+					print "opCode: ", opCode
+					print "srcMac: ", srcMac
+					print "srcIp: ", srcIp
+					print "destMac: ", destMac
+					print "destIp: ", destIp
 
-                    srcMac = binascii.unhexlify(srcMac.replace(':',''))
-                    destMac = binascii.unhexlify(destMac)
-                    srcIp = socket.inet_aton(srcIp)
-                    destIp = socket.inet_aton(binascii.unhexlify(destIp))
-                    hwareType = '\x00\x01'
-                    pcType = '\x08\x00'
-                    hwareSize = '\x06'
-                    pcSize = '\x04'
-                    opCode = '\x00\x01'
-                arpHeader = struct.pack("2s2s1s1s2s6s4s6s4s", hwareType,pcType,hwareSize,pcSize,opCode ,srcMac,srcIp,destMac,destIp)
+					srcMac = binascii.unhexlify(srcMac.replace(':',''))
+					destMac = binascii.unhexlify(destMac)
+					srcIp = socket.inet_aton(srcIp)
+					destIp = socket.inet_aton(binascii.unhexlify(destIp))
+					hwareType = '\x00\x01'
+					pcType = '\x08\x00'
+					hwareSize = '\x06'
+					pcSize = '\x04'
+					opCode = '\x00\x01'
+				arpHeader = struct.pack("2s2s1s1s2s6s4s6s4s", hwareType,pcType,hwareSize,pcSize,opCode ,srcMac,srcIp,destMac,destIp)
 
 		return arpHeader
 
@@ -156,10 +156,10 @@ class myRouter:
 	make arp request packet
 	'''
 	def makeArpRequest(self, targetIP, targetMac):
-            print 'router mac: ', self.routerMac
-	    ethHeader = struct.pack('!6s6s2s', '\xFF\xFF\xFF\xFF\xFF\xFF', binascii.unhexlify(self.routerMac.replace(':','')),  '\x08\x06')
-	    arpHeader = myRouter.makeArpHeader(self, False, '\x00\x01', '\x08\x00', '\x06', '\x04', self.routerMac, self.routerIp, '\x00\x00\x00\x00\x00\x00', targetIP)
-	    return ethHeader + arpHeader
+		print 'router mac: ', self.routerMac
+		ethHeader = struct.pack('!6s6s2s', '\xFF\xFF\xFF\xFF\xFF\xFF', binascii.unhexlify(self.routerMac.replace(':','')),  '\x08\x06')
+		arpHeader = myRouter.makeArpHeader(self, False, '\x00\x01', '\x08\x00', '\x06', '\x04', self.routerMac, self.routerIp, '\x00\x00\x00\x00\x00\x00', targetIP)
+		return ethHeader + arpHeader
 
 	"""
 	Runs the router
@@ -229,10 +229,10 @@ class myRouter:
 					#print binascii.hexlify(replyPacket)
 
 					s.sendto(replyPacket, packet[1])
-                                elif binascii.hexlify(opCode) == "0002":
-                                        print "#########ARP_REPLY##########"
-                                        print "##########ETH_HEADER########"
-            		        	print "##########ARP_REQUEST##########"
+				elif binascii.hexlify(opCode) == "0002":
+					print "#########ARP_REPLY##########"
+					print "##########ETH_HEADER########"
+					print "##########ARP_REQUEST##########"
 					print "##########ETH_HEADER###########"
 					print "Destination MAC:     ", binascii.hexlify(destinationMac)
 					print "Source MAC:          ", binascii.hexlify(sourceMac)
@@ -245,7 +245,6 @@ class myRouter:
 					print "Target MAC:          ", binascii.hexlify(targetMac)
 					print "Target IP:           ", binascii.hexlify(targetIP)
 					print "\n\n"
-
 
 
 			#if ICMP also apparently tcp is 800 so that's fun
@@ -308,31 +307,31 @@ class myRouter:
 							print 'Destination mac: ', destMac
 							arpReq = myRouter.makeArpRequest(self, destinationIP, destMac)
 							print 'packet[1]', packet[1]
-                                                        s.sendto(arpReq, (nextiface, 2048, 0, 1, '\xFF\xFF\xFF\xFF'))
-                                                else:
+							s.sendto(arpReq, (nextiface, 2048, 0, 1, '\xFF\xFF\xFF\xFF'))
+						else:
 
-						    #new eth header
-						    newEthHeader = struct.pack("!6s6s2s", sourceMac, destinationMac, ethType)
+							#new eth header
+							newEthHeader = struct.pack("!6s6s2s", sourceMac, destinationMac, ethType)
 
-						    #TODO: calculate checksum.  Part 3 shenanigans
+							#TODO: calculate checksum.  Part 3 shenanigans
 
-						    newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],checkSum, destinationIP, fsourceIP)
+							newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],checkSum, destinationIP, fsourceIP)
 
-						    #new ICMP header
-						    newIcmpChecksum = '\x00\x00'
+							#new ICMP header
+							newIcmpChecksum = '\x00\x00'
 
-						    tempIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x00', icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
+							tempIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x00', icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
 
 
-						    newIcmpChecksum = str(binascii.crc32(tempIcmpHeader))
+							newIcmpChecksum = str(binascii.crc32(tempIcmpHeader))
 
-						    #Pack new header
-						    newIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x00', icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
+							#Pack new header
+							newIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x00', icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
 
-						    #send it
-						    replyPacket = newEthHeader + newIpHeader + newIcmpHeader
-						    s.sendto(replyPacket, packet[1])
-						    print "icmp echo sent"
+							#send it
+							replyPacket = newEthHeader + newIpHeader + newIcmpHeader
+							s.sendto(replyPacket, packet[1])
+							print "icmp echo sent"
 
 
 temp = myRouter()
