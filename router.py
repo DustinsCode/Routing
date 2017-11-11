@@ -26,6 +26,7 @@ class myRouter:
 		self.routerMac = ''
 		self.routerIp = ''
 		self.nextIp = ''
+		self.nextMac = ''
 
 	"""
 	Finds MAC address of requested IP
@@ -61,9 +62,7 @@ class myRouter:
 
 				if len(entry) <= 1:
 					break
-				#print 'entry: ', entry
 				ipNum = entryList[1]
-				#fdestIp = socket.inet_ntoa(fdestIp)
 				destIpList = fdestIp.split('.')
 
 				#checking 16 and 24 bit patterns
@@ -89,8 +88,6 @@ class myRouter:
 		table2 = open("r2-table.txt", "r")
 		self.listIP1 = table1.read().replace("/", " ").split("\n")
 		self.listIP2 = table2.read().replace("/", " ").split("\n")
-		#finds mac address of router
-		#targetMac = findMac(targetIP, None)
 
 	"""
 	Creates ARP header
@@ -113,41 +110,22 @@ class myRouter:
 				if nextHop is False:
 					print "Error.  Destination not found"
 
-			#newAddrs = myRouter.findMac(self, destIp, nextHop)
-			#print 'new addrs in makeArpHeader: ', newAddrs
 			destIp = myRouter.findNextHop(self, self.listIP1, destIp, True)
 			self.nextIp = destIp
-			#destMac = newAddrs[1]
 			print "Next MAC: ", binascii.hexlify(destMac)
 			print "Next IP: ", destIp
-
-					hwareType = binascii.hexlify(hwareType)
-					pcType = binascii.hexlify(pcType)
-					pcSize = binascii.hexlify(pcSize)
-					opCode = binascii.hexlify(opCode)
-					#srcMac = binascii.hexlify(srcMac.replace(':', ''))
-					#srcIp = binascii.hexlify(srcIp)
-					destMac = binascii.hexlify(destMac)
-					destIp = binascii.hexlify(destIp)
-					print "hware: ", hwareType
-					print "pcType: ", pcType
-					print "pcSize: ", pcSize
-					print "opCode: ", opCode
-					print "srcMac: ", srcMac
-					print "srcIp: ", srcIp
-					print "destMac: ", destMac
-					print "destIp: ", destIp
-
-					srcMac = binascii.unhexlify(srcMac.replace(':',''))
-					destMac = binascii.unhexlify(destMac)
-					srcIp = socket.inet_aton(srcIp)
-					destIp = socket.inet_aton(binascii.unhexlify(destIp))
-					hwareType = '\x00\x01'
-					pcType = '\x08\x00'
-					hwareSize = '\x06'
-					pcSize = '\x04'
-					opCode = '\x00\x01'
-				arpHeader = struct.pack("2s2s1s1s2s6s4s6s4s", hwareType,pcType,hwareSize,pcSize,opCode ,srcMac,srcIp,destMac,destIp)
+			destMac = binascii.hexlify(destMac)
+			destIp = binascii.hexlify(destIp)
+			srcMac = binascii.unhexlify(srcMac.replace(':',''))
+			destMac = binascii.unhexlify(destMac)
+			srcIp = socket.inet_aton(srcIp)
+			destIp = socket.inet_aton(binascii.unhexlify(destIp))
+			hwareType = '\x00\x01'
+			pcType = '\x08\x00'
+			hwareSize = '\x06'
+			pcSize = '\x04'
+			opCode = '\x00\x01'
+		arpHeader = struct.pack("2s2s1s1s2s6s4s6s4s", hwareType,pcType,hwareSize,pcSize,opCode ,srcMac,srcIp,destMac,destIp)
 
 		return arpHeader
 
@@ -244,9 +222,8 @@ class myRouter:
 					print "Target MAC:          ", binascii.hexlify(targetMac)
 					print "Target IP:           ", binascii.hexlify(targetIP)
 					print "\n\n"
-
-
-			#if ICMP also apparently tcp is 800 so that's fun
+					self.nextMac = sourceMac
+			#ICMP also apparently tcp is 800 so that's fun
 			elif ethType == '\x08\x00':
 
 				#ip header
@@ -260,6 +237,8 @@ class myRouter:
 
 				#ipProtocol x01 is ICMP
 				if ipContents[1] == '\x00' and ipProtocol == '\x01':
+
+					#TODO: decrement TTL
 
 					#icmp header
 					icmpHeader = packet[0][34:98]
@@ -278,19 +257,17 @@ class myRouter:
 					if icmpType == '\x08':
 						print "echo request recd"
 
-						#TODO: Check if destination is on this network, if not, we need arp request
-						#print self.listIP1
+						#TCheck if destination is on this network, if not, we need arp request
 						sourceIp = socket.inet_ntoa(fsourceIP)
 						print 'source IP in icmp: ',  sourceIp
 						print 'desination IP: ', socket.inet_ntoa(destinationIP)
 						#Arp Request
-						#TODO: add logic.  if the destination isn't on this network, do arp request
 						nextiface = myRouter.findNextHop(self, self.listIP1, socket.inet_ntoa(destinationIP), False)
 						if nextiface == False:
 							nextiface = myRouter.findNextHop(self, self.listIP2, socket.inet_ntoa(destinationIP), False)
 
 						print 'nextiface = ', nextiface
-						if nextiface != False:
+						if nextiface != False and self.nextMac == '' and destinationIp != self.routerIp:
 							iface = myRouter.findNextHop(self, self.listIP1,sourceIp, False)
 							if iface is False:
 								iface = myRouter.findNextHop(self, self.listIP2, sourceIp, False)
@@ -308,21 +285,30 @@ class myRouter:
 							print 'packet[1]', packet[1]
 							s.sendto(arpReq, (nextiface, 2048, 0, 1, '\xFF\xFF\xFF\xFF'))
 						else:
+							if destinationIP == self.routerIp:
+								newDestIp = fsourceIP
+								destMac = sourceMac
+							else:
+								newDestIp = destinationIP
+								destMac = self.nextMac
+
+							print "newDestIp: ", newDestIp
+							print "destMac: ", destMac
 
 							#new eth header
-							newEthHeader = struct.pack("!6s6s2s", sourceMac, destinationMac, ethType)
+							newEthHeader = struct.pack("!6s6s2s", destMac, self.routerIp, ethType)
 
-							#TODO: calculate checksum.  Part 3 shenanigans
-
-							newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],checkSum, destinationIP, fsourceIP)
+							#calculate checksum.  Part 3 shenanigans
+							tempIpHeader = struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],'\x00\x00', self.routerIp, newDestIp)
+							newIpChecksum = calcChecksum(tempIpHeader)
+							newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],newIpChecksum, newDestIp, fsourceIP)
 
 							#new ICMP header
 							newIcmpChecksum = '\x00\x00'
 
 							tempIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x00', icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
 
-
-							newIcmpChecksum = str(binascii.crc32(tempIcmpHeader))
+							newIcmpChecksum = calcChecksum(tempIcmpHeader)
 
 							#Pack new header
 							newIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x00', icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
@@ -331,6 +317,22 @@ class myRouter:
 							replyPacket = newEthHeader + newIpHeader + newIcmpHeader
 							s.sendto(replyPacket, packet[1])
 							print "icmp echo sent"
+
+	"""
+	calculates checkSum
+	obtained from:
+	https://stackoverflow.com/questions/1767910/checksum-udp-calculation-python
+	"""
+	def carry_around_add(a, b):
+		c = a + b
+		return (c & 0xffff) + (c >> 16)
+
+	def calcChecksum(msg):
+		s = 0
+		for i in range(0, len(msg), 2):
+			w = ord(msg[i]) + (ord(msg[i+1]) << 8)
+			s = carry_around_add(s, w)
+		return ~s & 0xffff
 
 temp = myRouter()
 temp.getRoutingList()
