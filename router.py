@@ -37,9 +37,6 @@ class myRouter:
 			for iface in networkList:
 				addr = netifaces.ifaddresses(iface)[2][0]['addr']
 				mac = netifaces.ifaddresses(iface)[17][0]['addr']
-				#print addr
-				#print mac
-				#print socket.inet_ntoa(targetIP)
 				if addr == socket.inet_ntoa(IP):
 					return binascii.unhexlify(mac.replace(':', ''))
 		else:
@@ -54,8 +51,8 @@ class myRouter:
 	def findNextHop(self, iplist, fdestIp, nextIP):
 		#remove empty indexes
 		for i in iplist:
-		    if len(i.strip()) <= 1:
-		        iplist.remove(i)
+			if len(i.strip()) <= 1:
+				iplist.remove(i)
 
 		for entry in iplist:
 			entryList = entry.split(' ')
@@ -63,7 +60,7 @@ class myRouter:
 			if nextIP is False:
 
 				if len(entry) <= 1:
-				    break
+					break
 				#print 'entry: ', entry
 				ipNum = entryList[1]
 				#fdestIp = socket.inet_ntoa(fdestIp)
@@ -74,7 +71,7 @@ class myRouter:
 					newIpList = entryList[0].split('.')
 					if newIpList[0:2] == destIpList[0:2]:
 						return entryList[3]
-	            elif ipNum == '24':
+				elif ipNum == '24':
 					newIpList = entryList[0].split('.')
 					if newIpList[0:3] == destIpList[0:3]:
 						return entryList[3]
@@ -102,54 +99,52 @@ class myRouter:
 
 		#arp reply
 		if reply is True:
-		    opCode = '\x00\x02'
+			opCode = '\x00\x02'
 
 		#this is an ARP request
 		else:
-		    opCode = '\x00\x01'
-		    nextHop = myRouter.findNextHop(self, self.listIP1, destIp, False)
-		    print nextHop
-		    print destIp
-		    if nextHop is False:
+			opCode = '\x00\x01'
+			nextHop = myRouter.findNextHop(self, self.listIP1, destIp, False)
+			print nextHop
+			print destIp
+			if nextHop is False:
 				nextHop = myRouter.findNextHop(self, self.listIP2, destIp, False)
-			#if nextHop is False: send error message.  Part three stuff
+				#if nextHop is False: send error message.  Part three stuff
 				if nextHop is False:
 					print "Error.  Destination not found"
 
-		    #newAddrs = myRouter.findMac(self, destIp, nextHop)
-            print 'new addrs in makeArpHeader: ', newAddrs
-            destIp = myRouter.findNextHop(self, self.listIP1, destIp, True)
-		    destMac = newAddrs[1]
-		    print "Next MAC: ", destMac
-		    print "Next IP: ", destIp
+			#newAddrs = myRouter.findMac(self, destIp, nextHop)
+			print 'new addrs in makeArpHeader: ', newAddrs
+			destIp = myRouter.findNextHop(self, self.listIP1, destIp, True)
+			destMac = newAddrs[1]
+			print "Next MAC: ", destMac
+			print "Next IP: ", destIp
 
 		arpHeader = struct.pack("2s2s1s1s2s6s4s6s4s", hwareType,pcType,hwareSize,pcSize,opCode ,srcMac,srcIp,destMac,destIp)
-
 		return arpHeader
 
 	'''
 	make arp request packet
 	'''
 	def makeArpRequest(self, targetIP, targetMac):
-            print 'router mac: ', self.routerMac
-	    ethHeader = struct.pack('!6s6s2s', binascii.hexlify(self.routerMac.replace(':','')), '\xFF\xFF\xFF\xFF\xFF\xFF', '\x08\x06')
-	    arpHeader = myRouter.makeArpHeader(self, False, '\x00\x01', '\x08\x00', '\x06', '\x04', self.routerMac, self.routerIp, '\xFF\xFF\xFF\xFF\xFF\xFF', targetIP)
-	    return ethHeader + arpHeader
+		print 'router mac: ', self.routerMac
+		ethHeader = struct.pack('!6s6s2s', binascii.hexlify(self.routerMac.replace(':','')), '\xFF\xFF\xFF\xFF\xFF\xFF', '\x08\x06')
+		arpHeader = myRouter.makeArpHeader(self, False, '\x00\x01', '\x08\x00', '\x06', '\x04', self.routerMac, self.routerIp, '\xFF\xFF\xFF\xFF\xFF\xFF', targetIP)
+		return ethHeader + arpHeader
 
 	"""
 	Runs the router
 	"""
 	def router(self):
 
-	        try:
-		        s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x003))
+		try:
+			s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(0x003))
 			print "Socket connected"
 		except socket.error, msg:
 			print msg
 			sys.exit(-1)
 
-
-	        # https://stackoverflow.com/questions/24415294/python-arp-sniffing-raw-socket-no-reply-packets
+		# https://stackoverflow.com/questions/24415294/python-arp-sniffing-raw-socket-no-reply-packets
 
 		while True:
 			packet = s.recvfrom(1024)
@@ -160,7 +155,6 @@ class myRouter:
 
 			destinationMac = ethContents[0]
 			self.routerMac = destinationMac
-			#print binascii.hexlify(routerMac)
 			sourceMac = ethContents[1]
 			ethType = ethContents[2]
 
@@ -242,8 +236,8 @@ class myRouter:
 						#TODO: Check if destination is on this network, if not, we need arp request
 						#print self.listIP1
 						sourceIp = socket.inet_ntoa(fsourceIP)
-                                                print 'source IP in icmp: ',  sourceIp
-                                                print 'desination IP: ', socket.inet_ntoa(destinationIP)
+						print 'source IP in icmp: ',  sourceIp
+						print 'desination IP: ', socket.inet_ntoa(destinationIP)
 						#Arp Request
 						#TODO: add logic.  if the destination isn't on this network, do arp request
 						nextiface = myRouter.findNextHop(self, self.listIP1, socket.inet_ntoa(destinationIP), False)
