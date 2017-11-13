@@ -27,6 +27,7 @@ class myRouter:
 		self.routerIp = ''
 		self.nextIp = ''
 		self.nextMac = ''
+                self.knownAddrs = {}
 
 	"""
 	Finds MAC address of requested IP
@@ -139,6 +140,23 @@ class myRouter:
 		return ethHeader + arpHeader
 
 	"""
+	calculates checkSum
+	obtained from:
+	https://stackoverflow.com/questions/1767910/checksum-udp-calculation-python
+	"""
+	def carry_around_add(self, a, b):
+		c = a + b
+		return (c & 0xffff) + (c >> 16)
+
+	def calcChecksum(self, msg):
+		s = 0
+		for i in range(0, len(msg), 2):
+			w = ord(msg[i]) + (ord(msg[i+1]) << 8)
+			s =self.carry_around_add(s, w)
+		return binascii.hexlify(str(~s & 0xffff))
+
+
+	"""
 	Runs the router
 	"""
 	def router(self):
@@ -223,6 +241,8 @@ class myRouter:
 					print "Target IP:           ", binascii.hexlify(targetIP)
 					print "\n\n"
 					self.nextMac = sourceMac
+                                        self.knownAddrs[socket.inet_ntoa(sourceIP)] = sourceMac
+
 			#ICMP also apparently tcp is 800 so that's fun
 			elif ethType == '\x08\x00':
 
@@ -267,7 +287,7 @@ class myRouter:
 							nextiface = myRouter.findNextHop(self, self.listIP2, socket.inet_ntoa(destinationIP), False)
 
 						print 'nextiface = ', nextiface
-						if nextiface != False and self.nextMac == '' and destinationIp != self.routerIp:
+						if nextiface != False and self.nextMac == '' and destinationIP != self.routerIp:
 							iface = myRouter.findNextHop(self, self.listIP1,sourceIp, False)
 							if iface is False:
 								iface = myRouter.findNextHop(self, self.listIP2, sourceIp, False)
@@ -288,51 +308,38 @@ class myRouter:
 							if destinationIP == self.routerIp:
 								newDestIp = fsourceIP
 								destMac = sourceMac
-							else:
-								newDestIp = destinationIP
-								destMac = self.nextMac
+						                icmpType = '\x00'
+                                                        else:
+							        newDestIp = destinationIP
+								destMac = self.nextMaci
+                                                                icmpType = '\x08'
 
 							print "newDestIp: ", newDestIp
 							print "destMac: ", destMac
 
 							#new eth header
-							newEthHeader = struct.pack("!6s6s2s", destMac, self.routerIp, ethType)
+                                                        print "self.routerIp: ", self.routerIp
+                                                        newEthHeader = struct.pack("!6s6s2s", destMac, socket.inet_aton(self.routerIp), ethType)
 
 							#calculate checksum.  Part 3 shenanigans
-							tempIpHeader = struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],'\x00\x00', self.routerIp, newDestIp)
-							newIpChecksum = calcChecksum(tempIpHeader)
-							newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],newIpChecksum, newDestIp, fsourceIP)
+							tempIpHeader = struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],'\x00\x00', socket.inet_aton(self.routerIp), newDestIp)
+							newIpChecksum = self.calcChecksum(tempIpHeader)
+							newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],newIpChecksum, socket.inet_aton(self.routerIp), newDestIp)
 
 							#new ICMP header
 							newIcmpChecksum = '\x00\x00'
 
-							tempIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x00', icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
+							tempIcmpHeader = struct.pack("1s1s2s2s2s8s48s", icmpType, icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
 
-							newIcmpChecksum = calcChecksum(tempIcmpHeader)
+							newIcmpChecksum = self.calcChecksum(tempIcmpHeader)
 
 							#Pack new header
-							newIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x00', icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
+							newIcmpHeader = struct.pack("1s1s2s2s2s8s48s",icmpType, icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
 
 							#send it
 							replyPacket = newEthHeader + newIpHeader + newIcmpHeader
 							s.sendto(replyPacket, packet[1])
 							print "icmp echo sent"
-
-	"""
-	calculates checkSum
-	obtained from:
-	https://stackoverflow.com/questions/1767910/checksum-udp-calculation-python
-	"""
-	def carry_around_add(a, b):
-		c = a + b
-		return (c & 0xffff) + (c >> 16)
-
-	def calcChecksum(msg):
-		s = 0
-		for i in range(0, len(msg), 2):
-			w = ord(msg[i]) + (ord(msg[i+1]) << 8)
-			s = carry_around_add(s, w)
-		return ~s & 0xffff
 
 temp = myRouter()
 temp.getRoutingList()
