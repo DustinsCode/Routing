@@ -27,7 +27,7 @@ class myRouter:
 		self.routerIp = ''
 		self.nextIp = ''
 		self.nextMac = ''
-                self.knownAddrs = {}
+		self.knownAddrs = {}
 
 	"""
 	Finds MAC address of requested IP
@@ -113,8 +113,6 @@ class myRouter:
 
 			destIp = myRouter.findNextHop(self, self.listIP1, destIp, True)
 			self.nextIp = destIp
-			print "Next MAC: ", binascii.hexlify(destMac)
-			print "Next IP: ", destIp
 			destMac = binascii.hexlify(destMac)
 			destIp = binascii.hexlify(destIp)
 			srcMac = binascii.unhexlify(srcMac.replace(':',''))
@@ -193,7 +191,7 @@ class myRouter:
 				sourceIP = arpContents[6]
 				targetMac = arpContents[7]
 				targetIP = arpContents[8]
-                                self.routerIp = targetIP
+				self.routerIp = targetIP
 				if binascii.hexlify(opCode) == "0001":
 
 					print "##########ARP_REQUEST##########"
@@ -241,7 +239,7 @@ class myRouter:
 					print "Target IP:           ", binascii.hexlify(targetIP)
 					print "\n\n"
 					self.nextMac = sourceMac
-                                        self.knownAddrs[socket.inet_ntoa(sourceIP)] = sourceMac
+					self.knownAddrs[socket.inet_ntoa(sourceIP)] = sourceMac
 
 			#ICMP also apparently tcp is 800 so that's fun
 			elif ethType == '\x08\x00':
@@ -272,70 +270,60 @@ class myRouter:
 					icmpTime = icmpContents[5]
 					icmpData = icmpContents[6]
 
-                                        #TCheck if destination is on this network, if not, we need arp request
-				    	sourceIp = socket.inet_ntoa(fsourceIP)
-			    		print 'source IP in icmp: ',  sourceIp
-		    			print 'desination IP: ', socket.inet_ntoa(destinationIP)
-	    				#Arp Request
-    					nextiface = myRouter.findNextHop(self, self.listIP1, socket.inet_ntoa(destinationIP), False)
-                                        if nextiface == False:
-				    		nextiface = myRouter.findNextHop(self, self.listIP2, socket.inet_ntoa(destinationIP), False)
+					#TCheck if destination is on this network, if not, we need arp request
+					sourceIp = socket.inet_ntoa(fsourceIP)
+					print 'source IP in icmp: ',  sourceIp
+					print 'desination IP: ', socket.inet_ntoa(destinationIP)
+					#Arp Request
+					nextiface = myRouter.findNextHop(self, self.listIP1, socket.inet_ntoa(destinationIP), False)
+					if nextiface == False:
+						nextiface = myRouter.findNextHop(self, self.listIP2, socket.inet_ntoa(destinationIP), False)
 
-			    		print 'nextiface = ', nextiface
+					print 'nextiface = ', nextiface
 					if nextiface != False and self.nextMac == '' and destinationIP != self.routerIp:
-					        iface = myRouter.findNextHop(self, self.listIP1,sourceIp, False)
-					    	if iface is False:
-			        			iface = myRouter.findNextHop(self, self.listIP2, sourceIp, False)
+						iface = myRouter.findNextHop(self, self.listIP1,sourceIp, False)
+						if iface is False:
+							iface = myRouter.findNextHop(self, self.listIP2, sourceIp, False)
 
 						print 'iface = ', iface
 						routerAddrs = myRouter.findMac(self, '', iface)
 						self.routerIp = routerAddrs[0]
-					    	self.routerMac = routerAddrs[1]
-				    		destMac = myRouter.findMac(self, destinationIP, None)
-			    			destinationIP = socket.inet_ntoa(destinationIP)
-		    				print 'Destination IP: ', destinationIP
-			    			#it won't know the next mac address....that's why we do an arp request ya dummy
-		    				print 'Destination mac: ', destMac
-					    	arpReq = myRouter.makeArpRequest(self, destinationIP, destMac)
-				    		print 'packet[1]', packet[1]
-			    			s.sendto(arpReq, (nextiface, 2048, 0, 1, '\xFF\xFF\xFF\xFF'))
+						self.routerMac = routerAddrs[1]
+						destMac = myRouter.findMac(self, destinationIP, None)
+						destinationIP = socket.inet_ntoa(destinationIP)
+						print 'Destination IP: ', destinationIP
+						#it won't know the next mac address....that's why we do an arp request ya dummy
+						print 'Destination mac: ', destMac
+						arpReq = myRouter.makeArpRequest(self, destinationIP, destMac)
+						print 'packet[1]', packet[1]
+						s.sendto(arpReq, (nextiface, 2048, 0, 1, '\xFF\xFF\xFF\xFF'))
 
 					#Start building reply
 					#if type is echo request
 					if icmpType == '\x08':
 						print "echo request recd"
 
-                                                print 'self.routerIp', self.routerIp
-                                                print 'destinationIP', destinationIP
-						if destinationIP == self.routerIp:
-					        	newDestIp = fsourceIP
-					    		destMac = sourceMac
-				    	                icmpType = '\x00'
-                                                else:
-							newDestIp = destinationIP
-						    	destMac = self.nextMac
-                                                        icmpType = '\x08'
-
-						print "newDestIp: ", newDestIp
-						print "destMac: ", destMac
+						if destinationIP in myRouter.findMac(self,None, nextiface):
+							newDestIp = fsourceIP
+							destMac = sourceMac
+							icmpType = '\x00'
+						else:
+							destMac = myRouter.findMac(self, None, nextiface)
+							icmpType = '\x08'
 
 						#new eth header
-                                                print "new eth: self.routerMac: ", self.routerMac
-                                                if ':' in self.routerMac:
-                                                    self.routerMac = binascii.unhexlify(self.routerMac.replace(':', ''))
+						print "new eth: self.routerMac: ", self.routerMac
+						if ':' in self.routerMac:
+							self.routerMac = binascii.unhexlify(self.routerMac.replace(':', ''))
 
-                                                newEthHeader = struct.pack("!6s6s2s", destMac, self.routerMac, ethType)
+						newEthHeader = struct.pack("!6s6s2s", destMac, self.routerMac, ethType)
 
 						#calculate checksum.  Part 3 shenanigans
-                                                print "temp headers:"
-                                                print "self.routerIp: ", self.routerIp
-                                                print "newDestIp: ", newDestIp
-                                                print "ttl: ", ttl
-                                                newsource = self.routerIp
-                                                if '.' in self.routerIp:
-                                                    newsource = socket.inet_aton(self.routerIp)
-                                                if '.' in newDestIp:
-                                                    newdest = socket.inet_aton(newDestIp)
+						newsource = self.routerIp
+						if '.' in self.routerIp:
+							newsource = socket.inet_aton(self.routerIp)
+						if '.' in newDestIp:
+							newdest = socket.inet_aton(newDestIp)
 						tempIpHeader = struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],'\x00\x00', newsource, newDestIp)
 						newIpChecksum = self.calcChecksum(tempIpHeader)
 						newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],newIpChecksum, newsource, newDestIp)
