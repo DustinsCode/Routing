@@ -193,7 +193,7 @@ class myRouter:
        			s = self.carry_around_add(s, w)
    		return str(~s & 0xffff)
 
-		
+
         """
 	Runs the router
 	"""
@@ -375,7 +375,7 @@ class myRouter:
                                                         #ttl= ttl.replace('0x', '\\x')
                                                         ttl = binascii.unhexlify(ttl[2:])
 
-							tempIpHeader = struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],'\x00\x00', socket.inet_aton(fsourceIP), destinationIP)
+							tempIpHeader = struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],'\x00\x00', fsourceIP, destinationIP)
 							newIpChecksum = self.calcChecksum(tempIpHeader)
 							newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],newIpChecksum, fsourceIP, destinationIP)
 
