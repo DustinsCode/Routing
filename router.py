@@ -5,6 +5,7 @@ import sys
 import netifaces
 import struct
 import binascii
+import hashlib
 
 '''
 Virtual Router Project
@@ -149,12 +150,11 @@ class myRouter:
 		return (c & 0xffff) + (c >> 16)
 
 	def calcChecksum(self, msg):
-		s = 0
-		for i in range(0, len(msg), 2):
-			w = ord(msg[i]) + (ord(msg[i+1]) << 8)
-			s =self.carry_around_add(s, w)
-		return binascii.hexlify(str(~s & 0xffff))
-
+   		s = 0
+   		for i in range(0, len(msg), 2):
+       			w = ord(msg[i]) + (ord(msg[i+1]) << 8)
+       			s = self.carry_around_add(s, w)
+   		return str(~s & 0xffff)
 
 	"""
 	Runs the router
@@ -311,7 +311,7 @@ class myRouter:
 						                icmpType = '\x00'
                                                         else:
 							        newDestIp = destinationIP
-								destMac = self.nextMaci
+								destMac = self.nextMac
                                                                 icmpType = '\x08'
 
 							print "newDestIp: ", newDestIp
