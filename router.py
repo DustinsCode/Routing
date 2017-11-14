@@ -375,18 +375,19 @@ class myRouter:
                                                         #ttl= ttl.replace('0x', '\\x')
                                                         ttl = binascii.unhexlify(ttl[2:])
 
-							newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],checkSum, fsourceIP, destinationIP)
+							tempIpHeader = struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],'\x00\x00', socket.inet_aton(fsourceIP), destinationIP)
+							newIpChecksum = self.calcChecksum(tempIpHeader)
+							newIpHeader =  struct.pack("1s1s2s2s2s1s1s2s4s4s", ipContents[0], ipContents[1], ipContents[2],ipContents[3], ipContents[4], ttl, ipContents[6],newIpChecksum, fsourceIP, destinationIP)
 
 							#new ICMP header
 							newIcmpChecksum = '\x00\x00'
 
 							tempIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x00', icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
 
-
-							newIcmpChecksum = str(binascii.crc32(tempIcmpHeader))
+							newIcmpChecksum = self.calcChecksum(tempIcmpHeader)
 
 							#Pack new header
-							newIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x08', icmpCode, icmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
+							newIcmpHeader = struct.pack("1s1s2s2s2s8s48s", '\x08', icmpCode, newIcmpChecksum, icmpID, icmpSeq, icmpTime, icmpData)
 
 							#send it
 							replyPacket = newEthHeader + newIpHeader + newIcmpHeader
